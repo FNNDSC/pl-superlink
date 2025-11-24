@@ -41,8 +41,7 @@ jobs:
 
   build:
     name: Build
-    if: false  # delete this line and uncomment the line below to enable automatic builds
-    # if: github.event_name == 'push' || github.event_name == 'release'
+    if: github.event_name == 'push' || github.event_name == 'release'
     # needs: [ test ]  # uncomment to require passing tests
     runs-on: ubuntu-22.04
 
