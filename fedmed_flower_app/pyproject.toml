@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fedmed-flower-app"
+version = "0.2.0"
+description = "FedMed Flower App"
+license = {text = "MIT"}
+authors = [{name = "FedMed Team", email = "dev@fedmed.org"}]
+dependencies = [
+    "flwr>=1.23.0,<2",
+    "numpy>=1.26,<3",
+    "torch>=2.1.0",
+    "torchvision>=0.16.0",
+    "medmnist>=3.0.1",
+]
+
+[tool.hatch.build]
+exclude = [
+    "_static/*",
+    "dist/*",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["fedmed_flower_app"]
+
+[tool.flwr.app]
+publisher = "fedmed"
+
+[tool.flwr.app.components]
+serverapp = "fedmed_flower_app.server_app:app"
+clientapp = "fedmed_flower_app.client_app:app"
+
+[tool.flwr.app.config]
+num-server-rounds = 1
+total-clients = 1
+local-epochs = 10
+learning-rate = 0.001
+data-seed = 13
+fraction-evaluate = 1.0
+fraction-fit = 1.0
+batch-size = 64
+test-batch-size = 256
+
+[tool.flwr.federations]
+default = "fedmed-local"
+
+[tool.flwr.federations.fedmed-local]
+address = "127.0.0.1:9093"
+insecure = true
