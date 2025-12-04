@@ -19,7 +19,7 @@ from typing import Any, Callable, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 APP_PACKAGE = "fedmed_flower_app"
 APP_DIR = Path(resources.files(APP_PACKAGE))
@@ -339,7 +339,7 @@ def _run_federation(
     parser=parser,
     title="FedMed Flower SuperLink",
     category="Federated Learning",
-    min_memory_limit="8Gi",
+    min_memory_limit="24Gi",
     min_cpu_limit="2000m",
 )
 def _plugin_main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
