@@ -19,7 +19,7 @@ from typing import Any, Callable, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 APP_PACKAGE = "fedmed_flower_app"
 APP_DIR = Path(resources.files(APP_PACKAGE))
@@ -197,6 +197,7 @@ def _stage_flower_app(state_dir: Path) -> tuple[Path, Callable[[], None]]:
 
 def _build_run_config(options: Namespace) -> FlowerRunConfig:
     """Extract the Flower run override settings from plugin options."""
+    print(f"[fedmed-pl-superlink] building run config from options.rounds={options.rounds}", flush=True)
     return FlowerRunConfig(
         rounds=options.rounds,
         total_clients=options.total_clients,
@@ -209,6 +210,10 @@ def _build_run_config(options: Namespace) -> FlowerRunConfig:
 
 def _build_addresses(options: Namespace) -> SuperLinkAddresses:
     """Produce the Fleet/Control/ServerApp bind addresses."""
+    print(
+        f"[fedmed-pl-superlink] using host={options.host} fleet_port={options.fleet_port} control_port={options.control_port} serverapp_port={options.serverapp_port}",
+        flush=True,
+    )
     return SuperLinkAddresses(
         fleet=f"{options.host}:{options.fleet_port}",
         control=f"{options.host}:{options.control_port}",
@@ -221,6 +226,7 @@ def _prepare_environment(state_dir: str) -> tuple[dict[str, str], Path]:
     env = os.environ.copy()
     flwr_home = Path(state_dir).expanduser()
     flwr_home.mkdir(parents=True, exist_ok=True)
+    print(f"[fedmed-pl-superlink] prepared FLWR_HOME at {flwr_home}", flush=True)
     env["FLWR_HOME"] = str(flwr_home)
     return env, flwr_home
 
@@ -266,7 +272,9 @@ def _run_federation(
     env: dict[str, str],
 ) -> dict[str, Any]:
     """Bundle the Flower App, run `flwr run`, and return the parsed summary."""
+    print("[fedmed-pl-superlink] staging Flower app...", flush=True)
     staged_app_dir, cleanup_app = _stage_flower_app(Path(env["FLWR_HOME"]))
+    print(f"[fedmed-pl-superlink] staged app at {staged_app_dir}", flush=True)
     run_config = run_cfg.as_override_string()
     fed_config = f"address='{addresses.control}' insecure=true"
     cmd: List[str] = [
@@ -309,9 +317,11 @@ def _run_federation(
     )
     stdout_thread.start()
     stderr_thread.start()
+    print("[fedmed-pl-superlink] waiting for flwr run to finish...", flush=True)
     exit_code = proc.wait()
     stdout_thread.join()
     stderr_thread.join()
+    print(f"[fedmed-pl-superlink] flwr run exited with {exit_code}", flush=True)
     cleanup_app()
     if exit_code != 0:
         raise RuntimeError(f"flwr run exited with {exit_code}")
@@ -386,6 +396,7 @@ def _plugin_main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
 
 
 def main(*args, **kwargs):
+    print("Testing print statement", flush=True)
     if not args and not kwargs and "--json" in sys.argv:
         emit_plugin_json()
         return
