@@ -19,7 +19,7 @@ from typing import Any, Callable, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.2.4"
+__version__ = "0.0.1"
 
 APP_PACKAGE = "fedmed_flower_app"
 APP_DIR = Path(resources.files(APP_PACKAGE))
