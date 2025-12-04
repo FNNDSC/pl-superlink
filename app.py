@@ -19,7 +19,7 @@ from typing import Any, Callable, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 APP_PACKAGE = "fedmed_flower_app"
 APP_DIR = Path(resources.files(APP_PACKAGE))
@@ -28,6 +28,13 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_FLEET_PORT = 9092
 DEFAULT_CONTROL_PORT = 9093
 DEFAULT_SERVERAPP_PORT = 9091
+DEFAULT_ROUNDS = 3
+DEFAULT_TOTAL_CLIENTS = 3
+DEFAULT_LOCAL_EPOCHS = 10
+DEFAULT_LEARNING_RATE = 0.2
+DEFAULT_DATA_SEED = 13
+DEFAULT_FRACTION_EVAL = 1.0
+DEFAULT_STARTUP_DELAY = 3.0
 DEFAULT_STATE_DIR = Path("/tmp/fedmed-flwr")
 DEFAULT_SUMMARY = "server_summary.json"
 DEFAULT_WEIGHTS = "server_final.ckpt"
@@ -76,21 +83,36 @@ def build_parser() -> ArgumentParser:
         description="Run the FedMed Flower SuperLink inside ChRIS.",
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--host", default=DEFAULT_HOST, help="bind address for Flower services")
-    parser.add_argument("--fleet-port", type=int, default=DEFAULT_FLEET_PORT, help="Fleet API port")
-    parser.add_argument("--control-port", type=int, default=DEFAULT_CONTROL_PORT, help="Control API port")
-    parser.add_argument("--serverapp-port", type=int, default=DEFAULT_SERVERAPP_PORT, help="ServerAppIo port")
-    parser.add_argument("--rounds", type=int, default=1, help="federated rounds to run")
-    parser.add_argument("--total-clients", type=int, default=1, help="expected number of SuperNodes")
-    parser.add_argument("--local-epochs", type=int, default=10, help="local epochs per round")
-    parser.add_argument("--learning-rate", type=float, default=0.001, help="client learning rate")
-    parser.add_argument("--data-seed", type=int, default=13, help="seed for synthetic data generation")
-    parser.add_argument("--fraction-evaluate", type=float, default=1.0, help="fraction of clients used for evaluation")
-    parser.add_argument("--federation-name", default=DEFAULT_FEDERATION, help="Flower federation name from the pyproject")
-    parser.add_argument("--summary-file", default=DEFAULT_SUMMARY, help="filename to store the training summary")
-    parser.add_argument("--state-dir", type=str, default=str(DEFAULT_STATE_DIR), help="directory used as FLWR_HOME")
-    parser.add_argument("--keep-state", action="store_true", help="keep the Flower state directory after finishing")
-    parser.add_argument("--startup-delay", type=float, default=3.0, help="seconds to wait for SuperLink to boot")
+    parser.set_defaults(
+        host=DEFAULT_HOST,
+        fleet_port=DEFAULT_FLEET_PORT,
+        control_port=DEFAULT_CONTROL_PORT,
+        serverapp_port=DEFAULT_SERVERAPP_PORT,
+        federation_name=DEFAULT_FEDERATION,
+        summary_file=DEFAULT_SUMMARY,
+        state_dir=str(DEFAULT_STATE_DIR),
+        keep_state=False,
+        startup_delay=DEFAULT_STARTUP_DELAY,
+    )
+    parser.add_argument("--rounds", type=int, default=DEFAULT_ROUNDS, help="federated rounds to run")
+    parser.add_argument(
+        "--total-clients", type=int, default=DEFAULT_TOTAL_CLIENTS, help="expected number of SuperNodes"
+    )
+    parser.add_argument(
+        "--local-epochs", type=int, default=DEFAULT_LOCAL_EPOCHS, help="local epochs per round"
+    )
+    parser.add_argument(
+        "--learning-rate", type=float, default=DEFAULT_LEARNING_RATE, help="client learning rate"
+    )
+    parser.add_argument(
+        "--data-seed", type=int, default=DEFAULT_DATA_SEED, help="seed for synthetic data generation"
+    )
+    parser.add_argument(
+        "--fraction-evaluate",
+        type=float,
+        default=DEFAULT_FRACTION_EVAL,
+        help="fraction of clients used for evaluation",
+    )
     parser.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "-V",
