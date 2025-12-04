@@ -339,10 +339,11 @@ def _run_federation(
     parser=parser,
     title="FedMed Flower SuperLink",
     category="Federated Learning",
-    min_memory_limit="16Gi",
-    min_cpu_limit="1000m",
+    min_memory_limit="8Gi",
+    min_cpu_limit="2000m",
 )
 def _plugin_main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
+    print("[fedmed-pl-superlink] testing print statement", flush=True)
     del inputdir
     handle_signals()
 
