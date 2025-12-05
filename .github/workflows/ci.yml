@@ -1,6 +1,7 @@
 # Continuous integration testing for ChRIS Plugin.
 # https://github.com/FNNDSC/python-chrisapp-template/wiki/Continuous-Integration
 #
+# - on push and PR: run pytest
 # - on push to main: build and push container images as ":latest"
 # - on push to semver tag: build and push container image with tag and
 #                          upload plugin description to https://chrisstore.co
@@ -16,29 +17,34 @@ on:
     branches: [ main ]
 
 jobs:
+
   build:
     name: Build
     if: github.event_name == 'push' || github.event_name == 'release'
+    # needs: [ test ]  # uncomment to require passing tests
     runs-on: ubuntu-22.04
 
     steps:
       - name: Stop docker
         run: sudo systemctl stop docker
+
       - name: Clean docker data
         run: |
-          sudo rm -rf /var/lib/docker
-          sudo mkdir /var/lib/docker
+            sudo rm -rf /var/lib/docker
+            sudo mkdir /var/lib/docker
+
       - name: Maximize build space
-        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
+        uses: easimon/maximize-build-space@6ae56c86ea8db291ae39f62352a412c36ab8179b
         with:
           root-reserve-mb: 8192  # space needed for logs
-          swap-size-mb: 1        # must be >0
+          swap-size-mb: 1024       # must be >0
           build-mount-path: /var/lib/docker
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
           remove-docker-images: 'false'
+
       - name: Start docker
         run: sudo systemctl start docker
 
@@ -67,7 +73,7 @@ jobs:
           if '${{ github.ref_type }}' == 'tag':
               local_tag = join_tag(('ghcr.io', '${{ github.repository }}', version))
           else:
-              local_tag = join_tag(('localhost:5000', '${{ github.repository }}', 'latest'))
+              local_tag = join_tag(('localhost', '${{ github.repository }}', 'latest'))
 
           product = itertools.product(registries, repos, tags)
           tags_csv = ','.join(map(join_tag, product))
@@ -80,9 +86,6 @@ jobs:
               for k, v in outputs.items():
                   out.write(f'{k}={v}\n')
 
-      - name: Run local registry
-        run: docker run --rm -d -p 5000:5000 registry:2
-
       - uses: actions/checkout@v4
         # QEMU is used for non-x86_64 builds
       - uses: docker/setup-qemu-action@v3
@@ -90,6 +93,49 @@ jobs:
       - uses: docker/setup-buildx-action@v3
         with:
           driver-opts: network=host
+
+        # Here, we want to do the docker build twice:
+        # The first build pushes to our local registry for testing.
+        # The second build pushes to Docker Hub and ghcr.io 
+      - name: Build (local only)
+        uses: docker/build-push-action@v3
+        id: docker_build
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: ${{ steps.info.outputs.local_tag }}
+          load: true
+          cache-from: type=gha
+      # If you have a directory called examples/incoming/ and examples/outgoing/, then
+      # run your ChRIS plugin with no parameters, and assert that it creates all the files
+      # which are expected. File contents are not compared.
+      - name: Run examples
+        id: run_examples
+        run: |
+          if ! [ -d 'examples/incoming/' ] || ! [ -d 'examples/outgoing/' ]; then
+            echo "No examples."
+            exit 0
+          fi
+        
+          dock_image=${{ steps.info.outputs.local_tag }}
+          output_dir=$(mktemp -d)
+          cmd=$(docker image inspect -f '{{ (index .Config.Cmd 0) }}' $dock_image)
+          docker run --rm -u "$(id -u):$(id -g)" \
+            -v "$PWD/examples/incoming:/incoming:ro" \
+            -v "$output_dir:/outgoing:rw" \
+            $dock_image $cmd /incoming /outgoing
+          
+          for expected_file in $(find examples/outgoing -type f); do
+            fname="${expected_file##*/}"
+            out_path="$output_dir/$fname"
+            printf "Checking output %s exists..." "$out_path"
+            if [ -f "$out_path" ]; then
+              echo "ok"
+            else
+              echo "not found"
+              exit 1
+            fi
+          done
 
       - name: Login to DockerHub
         if: (github.event_name == 'push' || github.event_name == 'release') && contains(steps.info.outputs.tags_csv, 'docker.io')
@@ -110,8 +156,9 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: ${{ steps.info.outputs.tags_csv }},${{ steps.info.outputs.local_tag }}
-          platforms: linux/amd64
+          tags: ${{ steps.info.outputs.tags_csv }}
+          # if non-x86_84 architectures are supported, add them here
+          platforms: linux/amd64  #,linux/arm64,linux/ppc64le
           push: ${{ steps.info.outputs.push }}
           cache-to: type=gha,mode=max
 
@@ -124,8 +171,7 @@ jobs:
           username: ${{ secrets.CHRISPROJECT_USERNAME }}
           password: ${{ secrets.CHRISPROJECT_PASSWORD }}
           chris_url: https://cube.chrisproject.org/api/v1/
-          compute_names: NERC-gpu-bigshm
-          pull: missing
+          compute_names: NERC
 
       - name: Update DockerHub description
         if: steps.upload.outcome == 'success'
