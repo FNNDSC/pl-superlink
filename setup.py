@@ -13,10 +13,10 @@ def read_version() -> str:
 setup(
     name="fedmed-pl-superlink",
     version=read_version(),
-    description="Flower-based coordinator ChRIS plugin for the FedMed demo",
+    description="Flower-based coordinator ChRIS plugin",
     author="FedMed BU Team",
     author_email="rpsmith@bu.edu",
-    url="https://github.com/EC528-Fall-2025/FedMed-ChRIS",
+    url="https://github.com/FNNDSC/pl-superlink",
     py_modules=["app"],
     packages=["fedmed_flower_app"],
     package_dir={"fedmed_flower_app": "fedmed_flower_app/fedmed_flower_app"},
